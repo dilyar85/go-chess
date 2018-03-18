@@ -40,8 +40,8 @@ func createPiece(sign string, row, col int) Piece {
 
 }
 
-func (piece Piece) String() string {
-    switch piece.sign {
+func getPieceSymbol(sign string) string {
+    switch sign {
     case "k":
         return WhiteKing
     case "K":
@@ -68,7 +68,7 @@ func (piece Piece) String() string {
         return BlackPawn
 
     default:
-        panic("Cannot Print Piece. Unknown Sign: " + piece.sign)
+        panic("Cannot Print Piece. Unknown Sign:" + sign)
     }
 }
 
@@ -332,5 +332,9 @@ type Piece struct {
     sign     string
     team     Team
     row, col int
+}
+
+func (piece Piece) String() string {
+    return getPieceSymbol(piece.sign)
 }
 

@@ -7,13 +7,13 @@ p f2
 p g2
 p h2
 r a1
-r h1
 n b1
-n g1
 b c1
-b f1
 q d1
 k e1
+b f1
+n g1
+r h1
 P a7
 P b7
 P c7
@@ -23,11 +23,14 @@ P f7
 P g7
 P h7
 R a8
-R h8
 N b8
-N g8
 B c8
-B f8
 Q d8
 K e8
+B f8
+N g8
+R h8
+
+[]
+[]
 

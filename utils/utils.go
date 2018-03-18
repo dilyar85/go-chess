@@ -91,6 +91,15 @@ func ParseTestCase(path string) TestCase {
         line = strings.TrimSpace(line)
     }
 
+
+    line, _ = reader.ReadString('\n')
+    line = strings.TrimSpace(line)
+    whiteCaptures := strings.Split(line[1: len(line)-1], " ")
+
+    line, _ = reader.ReadString('\n')
+    line = strings.TrimSpace(line)
+    blackCaptures := strings.Split(line[1: len(line)-1], " ")
+
     line, _ = reader.ReadString('\n')
     line = strings.TrimSpace(line)
 
@@ -101,7 +110,7 @@ func ParseTestCase(path string) TestCase {
         line, _ = reader.ReadString('\n')
     }
 
-    return TestCase{initialPositions, moves}
+    return TestCase{initialPositions,whiteCaptures,blackCaptures, moves}
 }
 
 
@@ -118,7 +127,9 @@ func (ip InitialPosition) String() string {
 // MARK: TestCase class
 type TestCase struct {
     InitialPositions []InitialPosition
+    WhiteCaptures, BlackCaptures []string
     Moves            []string
+
 }
 
 func (tc TestCase) String() string {

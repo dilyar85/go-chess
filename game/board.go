@@ -3,12 +3,14 @@ package game
 import (
     "github.com/dilyar85/chess/utils"
     "strings"
+    "bytes"
 )
 
 const boardSize = 8
 
 type Board struct {
     squares [][]Square
+    whiteCaptures, blackCaptures []string
 }
 
 func NewBoard() *Board {
@@ -28,6 +30,8 @@ func NewBoard() *Board {
 
 
 func (board Board) String() string {
+    var buffer bytes.Buffer
+
     boardStr := make([][]string, boardSize)
     for i := 0; i < boardSize; i++ {
         boardStr[i] = make([]string, boardSize)
@@ -35,17 +39,40 @@ func (board Board) String() string {
             boardStr[i][j] = board.squares[i][j].String()
         }
     }
-    return utils.StringifyBoard(boardStr)
+    buffer.WriteString(utils.StringifyBoard(boardStr))
+
+    //White Captures: [symbols...]
+    buffer.WriteString("White Captures: [")
+    for _, capturedSign := range board.whiteCaptures {
+        if capturedSign != "" {
+            buffer.WriteString(getPieceSymbol(capturedSign) + " ") //cannot do getPieceSymbol("")
+        }
+    }
+    buffer.WriteString("] \n")
+
+    //Black Captures: [symbols...]
+    buffer.WriteString("Black Captures: [")
+    for _, capturedSign := range board.blackCaptures {
+        if capturedSign != "" {
+            buffer.WriteString(getPieceSymbol(capturedSign)+ " ") //cannot do getPieceSymbol("")
+        }
+    }
+    buffer.WriteString("] \n")
+
+    return buffer.String()
 }
 
 
-func (board Board) setupBoard(testCase utils.TestCase) {
+func (board *Board) setup(testCase utils.TestCase) {
     for _, ip := range testCase.InitialPositions {
         board.initPiece(ip.Position, ip.Sign)
     }
+
+    board.whiteCaptures = testCase.WhiteCaptures
+    board.blackCaptures = testCase.BlackCaptures
 }
 
-func (board Board) initPiece(position string, sign string) {
+func (board *Board) initPiece(position string, sign string) {
     square := board.getSquare(position)
     if square == nil || square.hasPiece() {
         panic("initPiece() failed on the position: " + position)
@@ -58,7 +85,7 @@ func (board Board) initPiece(position string, sign string) {
 
 
 // Execute the command passed
-func (board Board) execute(command string, team Team) bool {
+func (board *Board) execute(command string, team Team) bool {
 
     //Handle "in check situation" first
     if board.inCheck(team) {
@@ -88,15 +115,35 @@ func (board Board) execute(command string, team Team) bool {
 
 }
 
-func (board Board) movePiece(piece *Piece, squareFrom, squareTo *Square) {
+func (board *Board) movePiece(piece *Piece, squareFrom, squareTo *Square) {
+
+    capturedPiece := squareTo.piece
+    if capturedPiece != nil {
+        board.captured(*capturedPiece)
+    }
+
     //Update squares on board
     squareFrom.setPiece(nil)
     squareTo.setPiece(piece)
 
-    //Update moving Piece
+    //Update Piece row and col
     piece.row = squareTo.row
     piece.col = squareTo.col
+
 }
+
+
+func (board *Board) captured(capturedPiece Piece) {
+    team := getOpponentTeam(capturedPiece.team)
+    sign := capturedPiece.sign //board will print the symbols from piece.sign
+    switch team {
+    case white:
+        board.whiteCaptures = append(board.whiteCaptures, sign)
+    case black:
+        board.blackCaptures = append(board.blackCaptures, sign)
+    }
+}
+
 
 func (board Board) inCheck(curTeam Team) bool {
 
