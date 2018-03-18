@@ -5,6 +5,7 @@ import (
     "bufio"
     "os"
     "github.com/dilyar85/chess/utils"
+    "strings"
 )
 
 func New() ChessGame {
@@ -15,6 +16,8 @@ func New() ChessGame {
 const (
     MovesLimitCount      = 400
     InitialBoardFileName = "./playbook/initialBoard.txt"
+    illegalMoveMessage   = "Illegal move."
+
 )
 
 type ChessGame struct {
@@ -35,14 +38,15 @@ func (game ChessGame) StartInteractiveMode() {
 
         fmt.Print(game.getCuPlayerName(), "> ")
 
-        command, _ := reader.ReadString('\n')
+        input, _ := reader.ReadString('\n')
+        input = strings.TrimRight(input, "\n") //remove "\n" from input
 
-        gameEnd := game.execute(command)
+        gameEnd := game.execute(input)
         if gameEnd {
             return
         }
 
-        game.printAction(command)
+        game.printAction(input)
         game.printGameStatus()
     }
 
@@ -69,7 +73,7 @@ func (game ChessGame) printGameStatus() {
     //Print current board
     fmt.Println(game.board.String())
 
-    //TODO: Add captured stuff
+    //TODO: Add captured if needed
 }
 
 func (game *ChessGame) nextTurn() {
@@ -99,8 +103,7 @@ func (game ChessGame) execute(command string) (gameEnd bool) {
         }
     }()
 
-    //checkmate := game.board.Execute(command, game.curTeam) //TODO
-    checkmate := false
+    checkmate := game.board.execute(command, game.curTeam) //TODO
 
     if checkmate {
         game.endGameWithWinner(game.getCuPlayerName(), "Checkmate", command)
@@ -114,6 +117,8 @@ func (game ChessGame) execute(command string) (gameEnd bool) {
 
     return gameEnd
 }
+
+
 
 func (game ChessGame) endGameWithWinner(winnerPlayer string,  reason interface{}, lastCommand string) {
     game.printAction(lastCommand)
@@ -129,7 +134,7 @@ func (game ChessGame) endGameByTie(lastCommand string) {
 }
 
 func (game ChessGame) printAction(action string) {
-    fmt.Print(game.getCuPlayerName(), " player action: ", action)
+    fmt.Println(game.getCuPlayerName(), " player action: ", action)
 }
 
 
