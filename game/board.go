@@ -9,7 +9,7 @@ import (
 const boardSize = 8
 
 type Board struct {
-    squares [][]Square
+    squares                      [][]Square
     whiteCaptures, blackCaptures []string
 }
 
@@ -27,7 +27,6 @@ func NewBoard() *Board {
     board.squares = squares
     return board
 }
-
 
 func (board Board) String() string {
     var buffer bytes.Buffer
@@ -54,14 +53,13 @@ func (board Board) String() string {
     buffer.WriteString("Black Captures: [")
     for _, capturedSign := range board.blackCaptures {
         if capturedSign != "" {
-            buffer.WriteString(getPieceSymbol(capturedSign)+ " ") //cannot do getPieceSymbol("")
+            buffer.WriteString(getPieceSymbol(capturedSign) + " ") //cannot do getPieceSymbol("")
         }
     }
     buffer.WriteString("] \n")
 
     return buffer.String()
 }
-
 
 func (board *Board) setup(testCase utils.TestCase) {
     for _, ip := range testCase.InitialPositions {
@@ -83,8 +81,7 @@ func (board *Board) initPiece(position string, sign string) {
     square.setPiece(&piece)
 }
 
-
-// Execute the command passed
+// Execute the command passed, return true if it's inCheckmate
 func (board *Board) execute(command string, team Team) bool {
 
     //Handle "in check situation" first
@@ -100,7 +97,6 @@ func (board *Board) execute(command string, team Team) bool {
         panic(illegalMoveMessage)
     }
 
-
     //Check the movePiece first, panic if it's illegal movePiece on board
     move := board.checkMove(tokens[0], tokens[1], team)
 
@@ -110,8 +106,8 @@ func (board *Board) execute(command string, team Team) bool {
     //Promote
     //TODO: Handle promotion for Pawn
 
-    //return if caused checkmate
-    return board.inCheck(getOpponentTeam(team))
+    //return if the opponent team is in checkmate
+    return board.inCheckmate(getOpponentTeam(team))
 
 }
 
@@ -132,7 +128,6 @@ func (board *Board) movePiece(piece *Piece, squareFrom, squareTo *Square) {
 
 }
 
-
 func (board *Board) captured(capturedPiece Piece) {
     team := getOpponentTeam(capturedPiece.team)
     sign := capturedPiece.sign //board will print the symbols from piece.sign
@@ -144,21 +139,111 @@ func (board *Board) captured(capturedPiece Piece) {
     }
 }
 
-
 func (board Board) inCheck(curTeam Team) bool {
-
     kingPosition := board.getKingPosition(curTeam)
     opponentPositions := board.getReachablePositions(getOpponentTeam(curTeam))
     for _, position := range opponentPositions {
         if kingPosition == position {
-            //TODO
             return true
         }
     }
     return false
 }
 
-func (board Board) canMoveTo(position string, team Team) bool{
+func (board Board) inCheckmate(curTeam Team) bool {
+    return board.inCheck(curTeam) && len(board.getAvailableMovesInCheck(curTeam)) == 0
+}
+
+
+//Get all available moves to escape check for the given team
+func (board Board) getAvailableMovesInCheck(team Team) []string {
+    var availableMoves []string
+
+    //Escape check by moving King
+    availableMoves = append(availableMoves, board.getAvailableMovesByMovingKing(team)...)
+
+    //Escape check by moving other pieces than King
+    availableMoves = append(availableMoves, board.getAvailableMovesByMovingOtherPieces(team)...)
+
+    return availableMoves
+}
+
+func (board Board) getAvailableMovesByMovingKing(team Team) []string {
+    //No need to check threatenKingPiece size cause we are moving the King to safe place directly
+    var moves []string
+    kingPosition := board.getKingPosition(team)
+    kingPiece := board.getSquare(kingPosition).piece
+
+    opponentMoves := board.getReachablePositions(getOpponentTeam(team))
+
+    for _, kingMove := range getMoves(board, *kingPiece) {
+        if !containsMove(opponentMoves, kingMove) {
+            moves = append(moves, kingPosition+" "+kingMove)
+        }
+    }
+
+    return moves
+}
+
+func (board Board) getAvailableMovesByMovingOtherPieces(team Team) []string {
+    var moves []string
+    threatenKingPieces := board.getThreateningKingPieces(team)
+    if len(threatenKingPieces) != 1 {
+        return moves //Too many threatening pieces to capture
+    }
+
+    threatenPiece := threatenKingPieces[0]
+    threatenPosition := getCoordinatePosition(threatenPiece.row, threatenPiece.col)
+
+    for _, ownPiece := range board.getAllPieces(team) {
+        if isKing(ownPiece) {
+            continue //king's move was already considered in method getAvailableMovesByMovingKing()
+        }
+        positionFrom := getCoordinatePosition(ownPiece.row, ownPiece.col)
+
+        for _, positionTo := range getMoves(board, ownPiece) {
+            if !board.moveWillCauseSelfCheck(positionFrom, positionTo, team) {
+                moves = append(moves, positionFrom + " " + threatenPosition)
+            }
+        }
+    }
+
+    return moves
+}
+
+
+func (board Board) getThreateningKingPieces(team Team) []Piece {
+    var threatenPieces []Piece
+    kingPosition := board.getKingPosition(team)
+    for _, opponentPiece := range board.getAllPieces(getOpponentTeam(team)) {
+        opponentMoves := getMoves(board, opponentPiece)
+        if containsMove(opponentMoves, kingPosition) {
+            threatenPieces = append(threatenPieces, opponentPiece)
+        }
+    }
+    return threatenPieces
+}
+
+func (board Board) moveWillCauseSelfCheck(positionFrom, positionTo string, team Team) bool {
+
+    squareFrom := board.getSquare(positionFrom)
+    squareTo := board.getSquare(positionTo)
+
+    pieceFrom := squareFrom.piece
+    pieceTo := squareTo.piece
+
+    //Move piece and check
+    board.movePiece(pieceFrom, squareFrom, squareTo)
+    selfInCheck := board.inCheck(team)
+
+    //Move pieces back
+    board.movePiece(pieceFrom, squareTo, squareFrom)
+    squareTo.setPiece(pieceTo)
+
+    return selfInCheck
+}
+
+func (board Board) canMoveTo(position string, team Team) bool {
 
     square := board.getSquare(position)
     if square == nil {
@@ -171,12 +256,6 @@ func (board Board) canMoveTo(position string, team Team) bool{
 func (board Board) isEmptyAt(position string) bool {
     square := board.getSquare(position)
     return square != nil && !square.hasPiece()
-}
-
-
-//TODO: Method of the Boss!
-func (board Board) getAvailableMovesInCheck(team Team) []string {
-    return []string {}
 }
 
 func (board Board) getKingPosition(team Team) string {
@@ -223,7 +302,6 @@ func (board Board) getAllPieces(team Team) []Piece {
     return pieces
 }
 
-
 func (board Board) getSquare(position string) *Square {
     col := int(position[0] - 'a')
     if col < 0 || col >= boardSize {
@@ -235,15 +313,6 @@ func (board Board) getSquare(position string) *Square {
     }
     return &board.squares[row][col]
 }
-
-
-//TODO:
-func (board Board) moveWillCauseSelfCheck(piece *Piece, team Team, squareFrom *Square, squareTo *Square) bool {
-    return false
-}
-
-
-
 
 
 
@@ -275,7 +344,7 @@ func (square Square) getPiece() *Piece {
 
 // MARK: Move & Drop (helper struct for executing "movePiece" and "drop" commands )
 type Move struct {
-    piece *Piece
+    piece                *Piece
     squareFrom, squareTo *Square
 }
 
@@ -301,10 +370,9 @@ func (board Board) checkMove(origin, destination string, team Team) Move {
         panic(illegalMoveMessage)
     }
 
-
     //Check if causing self in check (considered as invalid movePiece in current rule)
-    if board.moveWillCauseSelfCheck(piece, team, squareFrom, squareTo) {
-        panic(illegalMoveMessage)
+    if board.moveWillCauseSelfCheck(origin, destination, team) {
+        panic(causingSelfInCheckMessage)
     }
 
     return Move{piece, squareFrom, squareTo}
@@ -321,13 +389,10 @@ func containsMove(moves []string, move string) bool {
     return false
 }
 
-
 func getCoordinatePosition(row, col int) string {
-    return (string) ('a' + col) + (string) ('0' - row + boardSize)
+    return (string)('a'+col) + (string)('0'-row+boardSize)
 }
 
 func getSquarePosition(square Square) string {
     return getCoordinatePosition(square.row, square.col)
 }
-
-

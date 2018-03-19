@@ -12,6 +12,7 @@ const (
     MovesLimitCount      = 400
     InitialBoardFileName = "./playbook/initialBoard.txt"
     illegalMoveMessage   = "Illegal move! Please enter again."
+    causingSelfInCheckMessage = "This move will cause yourself in check! Please enter again."
 
 )
 
@@ -29,32 +30,30 @@ type ChessGame struct {
 
 }
 
-func (game ChessGame) StartInteractiveMode() {
+func (game *ChessGame) StartInteractiveMode() {
 
     game.setupBoard(InitialBoardFileName)
     game.printGameStatus()
 
     for {
-        game.nextTurn()
+        game.changeTurn(true)
+        game.printAvailableMovesInCheck()
         input := game.promptInput(game.inputReader)
-
         gameEnd := game.execute(input)
         if gameEnd {
             return
         }
-
-        game.printAction(input)
-        game.printGameStatus()
     }
 
 }
 
-func (game ChessGame) StartFileMode(path string) {
+func (game *ChessGame) StartFileMode(path string) {
     fmt.Println("Entered file path:", path)
+    //TODO: Implement File Mode
 }
 
 
-func (game ChessGame) setupBoard(path string) utils.TestCase {
+func (game *ChessGame) setupBoard(path string) utils.TestCase {
 
     defer func() {
         if err := recover(); err != nil {
@@ -69,19 +68,19 @@ func (game ChessGame) setupBoard(path string) utils.TestCase {
 
 
 //Execute the command entered by user and return if game should end
-func (game ChessGame) execute(command string)  bool {
+func (game *ChessGame) execute(command string)  bool {
 
     defer func() {
         if err := recover(); err != nil {
             fmt.Println(err)
-            game.promptInput(game.inputReader)
+            game.changeTurn(false)
         }
     }()
 
     checkmate := game.board.execute(command, game.curTeam)
 
     if checkmate {
-        game.endGameWithWinner(game.getCuPlayerName(), "Checkmate", command)
+        game.endGameWithWinner(getTeamName(game.curTeam), "Checkmate", command)
         return true
     }
 
@@ -90,12 +89,14 @@ func (game ChessGame) execute(command string)  bool {
         return true
     }
 
+    game.printAction(command)
+    game.printGameStatus()
     return false
 }
 
 
 func (game ChessGame) promptInput(reader bufio.Reader) string {
-    fmt.Print(game.getCuPlayerName(), "> ")
+    fmt.Print(getTeamName(game.curTeam), "> ")
     input, _ := reader.ReadString('\n')
     input = strings.TrimRight(input, "\n") //remove "\n" from input
 
@@ -103,22 +104,39 @@ func (game ChessGame) promptInput(reader bufio.Reader) string {
 }
 
 
-func (game *ChessGame) nextTurn() {
-    game.movesCount++
+func (game *ChessGame) changeTurn(goesNext bool) {
 
-    //Set lower player if undecided
-    if game.curTeam == undecided {
-        game.curTeam = white
-        return
+    if goesNext {
+        game.movesCount++
+    } else {
+        game.movesCount--
     }
 
     //Switch team
     switch game.curTeam {
+    case undecided:
+        game.curTeam = white
     case black:
         game.curTeam = white
     case white:
         game.curTeam = black
     }
+}
+
+func (game ChessGame) printAvailableMovesInCheck() {
+    curTeam := game.curTeam
+
+    if !game.board.inCheck(curTeam) {
+        return
+    }
+
+    fmt.Println(getTeamName(game.curTeam) + " is in check!")
+    fmt.Println("Available moves:")
+    availableMoves := game.board.getAvailableMovesInCheck(curTeam)
+    for _, move := range availableMoves {
+        fmt.Println(move)
+    }
+    fmt.Println()
 }
 
 
@@ -146,26 +164,7 @@ func (game ChessGame) printGameStatus() {
 }
 
 func (game ChessGame) printAction(action string) {
-    fmt.Println(game.getCuPlayerName(), " player action: ", action)
-}
-
-
-func (game ChessGame) getCuPlayerName() string {
-
-    if game.curTeam == black {
-        return "BLACK"
-    } else {
-        return "WHITE"
-    }
-
-}
-
-func (game ChessGame) getOtherPlayerName() string {
-    if game.curTeam == black {
-        return "white"
-    } else {
-        return "lower"
-    }
+    fmt.Println(getTeamName(game.curTeam), " player action: ", action)
 }
 
 
@@ -177,13 +176,37 @@ const (
     black     Team = iota
 )
 
+func getTeamName(team Team) string {
+    switch team {
+    case white:
+        return "WHITE Player"
+    case black:
+        return "BLACK Player"
+
+    default:
+        return "Unknown Player"
+    }
+}
+
+func getOpponentTeamName(team Team) string {
+    var opponent Team
+    if team == white {
+        opponent = black
+    } else {
+        opponent = white
+    }
+    return getTeamName(opponent)
+}
+
 
 func getOpponentTeam(curTeam Team) Team {
+
     if curTeam == black {
         return white
     } else {
         return black
     }
+
 }
 
 

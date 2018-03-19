@@ -4,7 +4,6 @@ import (
     "strings"
 )
 
-
 //type PieceSymbol string
 const (
     WhiteKing = "\u2654"
@@ -72,11 +71,8 @@ func getPieceSymbol(sign string) string {
     }
 }
 
-
-
 // MARK: Functions about Piece's movement
 func getMoves(board Board, piece Piece) []string {
-
 
     row := piece.row
     col := piece.col
@@ -101,7 +97,6 @@ func getMoves(board Board, piece Piece) []string {
 
     case WhitePawn, BlackPawn:
         return getPawnMoves(row, col, board, team)
-
 
     default:
         panic("piece.String() hasn't been defined: " + piece.String())
@@ -141,7 +136,7 @@ func getRookMoves(row, col int, board Board, team Team) []string {
         position := getCoordinatePosition(row, j)
         if board.isEmptyAt(position) {
             moves = append(moves, position)
-        } else if board.canMoveTo(position, team){
+        } else if board.canMoveTo(position, team) {
             moves = append(moves, position)
             break
         } else {
@@ -154,7 +149,7 @@ func getRookMoves(row, col int, board Board, team Team) []string {
         position := getCoordinatePosition(row, j)
         if board.isEmptyAt(position) {
             moves = append(moves, position)
-        } else if board.canMoveTo(position, team){
+        } else if board.canMoveTo(position, team) {
             moves = append(moves, position)
             break
         } else {
@@ -191,13 +186,12 @@ func getRookMoves(row, col int, board Board, team Team) []string {
     return moves
 }
 
-
 func getBishopMovesAt(row, col int, board Board, team Team) []string {
 
     var moves []string
 
     //Move Top Left
-    for i, j := row - 1, col - 1; i >= 0 && j >= 0; i, j = i - 1, j - 1 {
+    for i, j := row-1, col-1; i >= 0 && j >= 0; i, j = i-1, j-1 {
         position := getCoordinatePosition(i, j)
         if board.isEmptyAt(position) {
             moves = append(moves, position)
@@ -210,7 +204,7 @@ func getBishopMovesAt(row, col int, board Board, team Team) []string {
     }
 
     //Move Top Right
-    for i, j := row - 1, col + 1; i >= 0 && j < boardSize; i, j = i - 1, j + 1 {
+    for i, j := row-1, col+1; i >= 0 && j < boardSize; i, j = i-1, j+1 {
         position := getCoordinatePosition(i, j)
         if board.isEmptyAt(position) {
             moves = append(moves, position)
@@ -223,7 +217,7 @@ func getBishopMovesAt(row, col int, board Board, team Team) []string {
     }
 
     //Move Bottom Left
-    for i, j := row + 1, col - 1; i < boardSize && j >= 0; i, j = i + 1, j - 1 {
+    for i, j := row+1, col-1; i < boardSize && j >= 0; i, j = i+1, j-1 {
         position := getCoordinatePosition(i, j)
         if board.isEmptyAt(position) {
             moves = append(moves, position)
@@ -236,7 +230,7 @@ func getBishopMovesAt(row, col int, board Board, team Team) []string {
     }
 
     //Move Bottom Right
-    for i, j := row + 1, col + 1; i < boardSize && j < boardSize; i, j = i + 1, j + 1 {
+    for i, j := row+1, col+1; i < boardSize && j < boardSize; i, j = i+1, j+1 {
         position := getCoordinatePosition(i, j)
         if board.isEmptyAt(position) {
             moves = append(moves, position)
@@ -250,7 +244,6 @@ func getBishopMovesAt(row, col int, board Board, team Team) []string {
 
     return moves
 }
-
 
 func getKnightMoves(row, col int, board Board, team Team) []string {
     var moves []string
@@ -266,11 +259,11 @@ func getKnightMoves(row, col int, board Board, team Team) []string {
         } else {
             j = 2
         }
-        leftward := getCoordinatePosition(row + i, col - j)
+        leftward := getCoordinatePosition(row+i, col-j)
         if board.canMoveTo(leftward, team) {
             moves = append(moves, leftward)
         }
-        rightward := getCoordinatePosition(row + i, col + j)
+        rightward := getCoordinatePosition(row+i, col+j)
         if board.canMoveTo(rightward, team) {
             moves = append(moves, rightward)
         }
@@ -288,12 +281,11 @@ func getPawnMoves(row, col int, board Board, team Team) []string {
     oneStepRow := row
     twoStepsRow := row
 
-
     switch team {
     case white:
         oneStepRow--
         twoStepsRow -= 2
-        firstMove = row == boardSize - 2
+        firstMove = row == boardSize-2
     case black:
         oneStepRow++
         twoStepsRow += 2
@@ -313,17 +305,23 @@ func getPawnMoves(row, col int, board Board, team Team) []string {
     }
 
     //Get Two Killing positions if there is enemy nearby to kill
-    position = getCoordinatePosition(oneStepRow, col - 1)
+    position = getCoordinatePosition(oneStepRow, col-1)
     if board.canMoveTo(position, team) {
         moves = append(moves, position)
     }
-    position = getCoordinatePosition(oneStepRow, col + 1)
+    position = getCoordinatePosition(oneStepRow, col+1)
     if board.canMoveTo(position, team) {
         moves = append(moves, position)
     }
 
     return moves
 }
+
+func isKing(piece Piece) bool {
+    symbol := getPieceSymbol(piece.sign)
+    return symbol == WhiteKing || symbol == BlackKing
+}
+
 
 
 // MARK: Piece
@@ -337,4 +335,3 @@ type Piece struct {
 func (piece Piece) String() string {
     return getPieceSymbol(piece.sign)
 }
-
